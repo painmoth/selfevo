@@ -2,6 +2,8 @@
 
 具备记忆与情感反馈的对话 Agent，支持 Web 端聊天与流式输出。后端基于 FastAPI，前端为 React，LLM 支持 OpenAI / OpenRouter 等。
 
+[![Star History Chart](https://api.star-history.com/svg?repos=painmoth/selfevo&type=Date)](https://star-history.com/#painmoth/selfevo&Date)
+
 ## 功能
 
 - **对话**：发送消息、流式回复（WebSocket）
@@ -98,6 +100,10 @@ npm run dev
 
 - [README_WEB.md](README_WEB.md) — Web 端使用与待实现功能
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — 故障排查
+
+## 联系方式
+
+- **Email**: [painmoth@gmail.com](mailto:painmoth@gmail.com)
 
 ## License
 
