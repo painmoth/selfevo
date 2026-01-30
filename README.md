@@ -2,7 +2,8 @@
 
 具备记忆与情感反馈的对话 Agent，支持 Web 端聊天与流式输出。后端基于 FastAPI，前端为 React，LLM 支持 OpenAI / OpenRouter 等。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=painmoth/selfevo&type=Date)](https://star-history.com/#painmoth/selfevo&Date)
+<img width="1871" height="851" alt="image" src="https://github.com/user-attachments/assets/afd03247-a305-4e67-aee7-222726d0f4b0" />
+<img width="349" height="776" alt="image" src="https://github.com/user-attachments/assets/3b405dc5-84a7-4b0c-8a78-652b808bc4b2" />
 
 ## 功能
 
@@ -108,3 +109,7 @@ npm run dev
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
+## Star History
+[![Star History Chart](https://api.star-history.com/svg?repos=painmoth/selfevo&type=Date)](https://star-history.com/#painmoth/selfevo&Date)
+
