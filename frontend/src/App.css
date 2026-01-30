@@ -13,6 +13,8 @@
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
+  z-index: 100; /* 确保header在最上层 */
+  flex-shrink: 0; /* 防止被压缩 */
 }
 
 .app-header::before {
@@ -37,9 +39,12 @@
   margin-bottom: 0.25rem;
 }
 
-.app-header .subtitle {
+.app-header .slogan {
   font-size: 0.875rem;
-  opacity: 0.9;
+  opacity: 0.8;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 0.125rem;
 }
 
 .app-main {

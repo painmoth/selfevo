@@ -10,6 +10,8 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  isError?: boolean // 是否为错误消息
+  retryMessage?: string // 需要重试的消息内容（仅错误消息时使用）
 }
 
 interface SessionInfo {
@@ -36,7 +38,7 @@ const ChatInterface: React.FC = () => {
   const [sessions, setSessions] = useState<SessionInfo[]>([])
   const [isSessionLoading, setIsSessionLoading] = useState(false)
   const [sessionMenuOpenId, setSessionMenuOpenId] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false) // 移动端sidebar控制
+  const [sidebarOpen, setSidebarOpen] = useState(true) // PC端默认打开，移动端默认关闭
   const [isMobile, setIsMobile] = useState(false) // 是否移动端
 
   // 检测移动端
@@ -194,7 +196,9 @@ const ChatInterface: React.FC = () => {
             setMessages(prev => [...prev, {
               role: 'assistant',
               content: `错误: ${data.error}`,
-              timestamp: new Date()
+              timestamp: new Date(),
+              isError: true,
+              retryMessage: messageToSend // 保存需要重试的消息
             }])
             setCurrentResponse('')
             setIsLoading(false)
@@ -280,9 +284,109 @@ const ChatInterface: React.FC = () => {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `发送失败: ${errorMessage}`,
-        timestamp: new Date()
+        timestamp: new Date(),
+        isError: true,
+        retryMessage: message // 保存需要重试的消息
       }])
       setIsLoading(false)
+    }
+  }
+
+  // 重试失败的消息
+  const retryMessage = async (retryMsg: string, msgIndex: number) => {
+    if (!sessionId || !retryMsg.trim()) return
+
+    // 移除错误消息
+    setMessages(prev => prev.filter((_, idx) => idx !== msgIndex))
+
+    // 重新发送消息
+    const userMessage: Message = {
+      role: 'user',
+      content: retryMsg,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, userMessage])
+    setIsLoading(true)
+    setCurrentResponse('')
+
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsHost = import.meta.env.DEV
+        ? `${window.location.hostname}:8000`
+        : window.location.host
+      const wsUrl = `${wsProtocol}//${wsHost}/api/chat/stream`
+
+      const websocket = new WebSocket(wsUrl)
+
+      websocket.onopen = () => {
+        websocket.send(JSON.stringify({
+          message: retryMsg,
+          session_id: sessionId
+        }))
+      }
+
+      let accumulatedResponse = ''
+
+      websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          if (data.type === 'chunk') {
+            accumulatedResponse += data.content
+            setCurrentResponse(accumulatedResponse)
+          } else if (data.type === 'done') {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: accumulatedResponse,
+              timestamp: new Date()
+            }])
+            setCurrentResponse('')
+            setIsLoading(false)
+            if (data.emotion) {
+              setCurrentEmotion(data.emotion)
+            }
+            if (data.sprite_path) {
+              setCurrentSpritePath(data.sprite_path)
+            }
+            websocket.close()
+            loadSessionList()
+          } else if (data.type === 'error') {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `错误: ${data.error}`,
+              timestamp: new Date(),
+              isError: true,
+              retryMessage: retryMsg
+            }])
+            setCurrentResponse('')
+            setIsLoading(false)
+            websocket.close()
+          }
+        } catch (e) {
+          console.error('解析消息失败:', e)
+        }
+      }
+
+      websocket.onerror = () => {
+        setIsLoading(false)
+        setTimeout(() => {
+          fallbackToRestAPI(retryMsg, sessionId)
+        }, 100)
+      }
+
+      websocket.onclose = (event) => {
+        if (event.code !== 1000 && isLoading) {
+          setIsLoading(false)
+          setTimeout(() => {
+            fallbackToRestAPI(retryMsg, sessionId)
+          }, 100)
+        }
+      }
+
+      setWs(websocket)
+    } catch (error) {
+      console.error('重试失败:', error)
+      fallbackToRestAPI(retryMsg, sessionId)
     }
   }
 
@@ -305,6 +409,7 @@ const ChatInterface: React.FC = () => {
       )}
       <aside className={`session-sidebar ${sidebarOpen ? 'open' : ''} ${isMobile ? 'mobile' : ''}`}>
         <div className="session-top">
+          <div className="session-section-title">Chats</div>
           <button
             className="session-new-icon"
             onClick={async () => {
@@ -322,8 +427,6 @@ const ChatInterface: React.FC = () => {
             </svg>
           </button>
         </div>
-
-        <div className="session-section-title">Chats</div>
         <div className="session-list">
           {sessions.map((s) => (
             <div
@@ -397,22 +500,20 @@ const ChatInterface: React.FC = () => {
         </div>
       </aside>
 
-      <div className="chat-interface">
-        {/* 移动端菜单按钮 */}
-        {isMobile && (
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            title="菜单"
-          >
-            <svg className="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-            </svg>
-          </button>
-        )}
+      <div className={`chat-interface ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        {/* 菜单按钮（PC端和移动端都显示） */}
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          title={sidebarOpen ? "收起菜单" : "展开菜单"}
+        >
+          <svg className="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+          </svg>
+        </button>
         <div className="chat-messages">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`message ${msg.role}`}>
+            <div key={idx} className={`message ${msg.role} ${msg.isError ? 'error' : ''}`}>
               <div className="message-content">
                 {msg.role === 'assistant' ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -426,22 +527,34 @@ const ChatInterface: React.FC = () => {
                 <div className="message-time">
                   {msg.timestamp.toLocaleTimeString()}
                 </div>
-                {msg.role === 'assistant' && (
-                  <button
-                    className="feedback-button"
-                    onClick={() => {
-                      const userMsg = messages[idx - 1]?.role === 'user' ? messages[idx - 1] : null
-                      setSelectedMessage({
-                        task: userMsg?.content || '未知任务',
-                        response: msg.content
-                      })
-                      setFeedbackModalOpen(true)
-                    }}
-                    title="反馈本次回复并触发进化"
-                  >
-                    反馈&进化
-                  </button>
-                )}
+                <div className="message-actions">
+                  {msg.isError && msg.retryMessage && (
+                    <button
+                      className="retry-button"
+                      onClick={() => retryMessage(msg.retryMessage!, idx)}
+                      disabled={isLoading}
+                      title="重试"
+                    >
+                      重试
+                    </button>
+                  )}
+                  {msg.role === 'assistant' && !msg.isError && (
+                    <button
+                      className="feedback-button"
+                      onClick={() => {
+                        const userMsg = messages[idx - 1]?.role === 'user' ? messages[idx - 1] : null
+                        setSelectedMessage({
+                          task: userMsg?.content || '未知任务',
+                          response: msg.content
+                        })
+                        setFeedbackModalOpen(true)
+                      }}
+                      title="反馈本次回复并触发进化"
+                    >
+                      反馈&进化
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -479,7 +592,7 @@ const ChatInterface: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="输入消息... (Enter发送, Shift+Enter换行)"
-            rows={3}
+            rows={1}
             disabled={isLoading}
           />
           <button

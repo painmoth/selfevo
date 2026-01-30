@@ -1,10 +1,12 @@
 .sprite-container {
   position: fixed;
-  right: 20px;
-  bottom: 100px;
+  right: 1.25rem; /* 使用相对单位 */
+  /* bottom计算：chat-input-container高度(约4.5rem) + 间距(1rem) = 5.5rem */
+  bottom: 5.5rem; /* 确保在输入框上方 */
   width: 300px;
   height: 400px;
-  z-index: 10;
+  max-height: calc(100vh - 5.5rem - 1rem); /* 100vh - input区域高度 - 顶部间距 */
+  z-index: 2; /* 低于对话内容和sidebar，避免覆盖 */
   pointer-events: none;
   display: flex;
   align-items: flex-end;
@@ -32,8 +34,9 @@
   .sprite-container {
     width: 200px;
     height: 300px;
-    right: 10px;
-    bottom: 80px;
+    right: 0.625rem;
+    bottom: 5.5rem; /* 保持与输入框的距离 */
+    max-height: calc(100vh - 5.5rem - 1rem);
   }
 }
 
@@ -41,8 +44,8 @@
   .sprite-container {
     width: 150px;
     height: 200px;
-    right: 10px;
-    bottom: 120px;
-    /* 移动端不隐藏，但缩小 */
+    right: 0.625rem;
+    bottom: 5.5rem; /* 保持与输入框的距离 */
+    max-height: calc(100vh - 5.5rem - 1rem);
   }
 }
