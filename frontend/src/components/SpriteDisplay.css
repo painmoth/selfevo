@@ -1,0 +1,48 @@
+.sprite-container {
+  position: fixed;
+  right: 20px;
+  bottom: 100px;
+  width: 300px;
+  height: 400px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sprite-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: opacity 0.3s ease-in-out;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+.sprite-image.fade-in {
+  opacity: 1;
+}
+
+.sprite-image.fade-out {
+  opacity: 0;
+}
+
+/* 响应式设计：在小屏幕上隐藏或缩小 */
+@media (max-width: 1200px) {
+  .sprite-container {
+    width: 200px;
+    height: 300px;
+    right: 10px;
+    bottom: 80px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sprite-container {
+    width: 150px;
+    height: 200px;
+    right: 10px;
+    bottom: 120px;
+    /* 移动端不隐藏，但缩小 */
+  }
+}
